@@ -2,10 +2,18 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Tennis: Manual Serve</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>3D Tennis: Balanced Mode</title>
     <style>
-        body { margin: 0; overflow: hidden; background-color: #87CEEB; font-family: 'Segoe UI', sans-serif; }
+        body { 
+            margin: 0; 
+            overflow: hidden; 
+            background-color: #87CEEB; 
+            font-family: 'Segoe UI', sans-serif;
+            touch-action: none; /* 모바일 제스처 방지 */
+            user-select: none;
+            -webkit-user-select: none;
+        }
         
         /* UI 레이어 */
         #ui-layer {
@@ -15,27 +23,28 @@
             pointer-events: none;
             display: flex;
             justify-content: center;
-            gap: 60px;
+            gap: 40px;
             z-index: 10;
         }
         .score-box {
             background: rgba(255, 255, 255, 0.9);
             color: #333;
-            padding: 15px 40px;
-            border-radius: 15px;
+            padding: 10px 25px;
+            border-radius: 12px;
             text-align: center;
-            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
-            border: 3px solid #fff;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            border: 2px solid #fff;
+            min-width: 60px;
         }
-        .score-box.player { border-bottom: 5px solid #1E90FF; }
-        .score-box.ai { border-bottom: 5px solid #FF4500; }
-        .score-label { font-size: 16px; font-weight: bold; color: #555; text-transform: uppercase; margin-bottom: 5px; }
-        .score-num { font-size: 50px; font-weight: 900; color: #222; line-height: 1; }
+        .score-box.player { border-bottom: 4px solid #1E90FF; }
+        .score-box.ai { border-bottom: 4px solid #FF4500; }
+        .score-label { font-size: 12px; font-weight: bold; color: #555; text-transform: uppercase; margin-bottom: 2px; }
+        .score-num { font-size: 36px; font-weight: 900; color: #222; line-height: 1; }
         
         /* 메시지 오버레이 */
         #message-overlay {
             position: absolute;
-            top: 40%;
+            top: 35%;
             left: 50%;
             transform: translate(-50%, -50%);
             text-align: center;
@@ -44,21 +53,21 @@
             width: 100%;
         }
         #main-msg {
-            font-size: 100px;
+            font-size: 60px;
             font-weight: 900;
             color: #ff3333;
             text-transform: uppercase;
-            text-shadow: 4px 4px 0px white, -2px -2px 0 white;
+            text-shadow: 3px 3px 0px white, -1px -1px 0 white;
             opacity: 0;
             transform: scale(0.5);
             transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
         #sub-msg {
-            font-size: 30px;
+            font-size: 20px;
             font-weight: bold;
             color: #fff;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.7);
-            margin-top: 10px;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.7);
+            margin-top: 5px;
             opacity: 0;
             transition: opacity 0.3s;
         }
@@ -66,15 +75,17 @@
         /* 서브 안내 메시지 */
         #serve-guide {
             position: absolute;
-            top: 60%;
+            top: 55%;
             left: 50%;
             transform: translate(-50%, -50%);
-            font-size: 24px;
+            font-size: 20px;
             font-weight: bold;
             color: #FFD700;
             text-shadow: 1px 1px 3px rgba(0,0,0,0.8);
             pointer-events: none;
             display: none;
+            width: 100%;
+            text-align: center;
             animation: pulse 1.5s infinite;
         }
         @keyframes pulse {
@@ -83,23 +94,82 @@
             100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
         }
 
-        /* 조작법 안내 */
-        #controls {
+        /* 모바일 컨트롤러 */
+        #mobile-controls {
             position: absolute;
-            bottom: 30px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0,0,0,0.6);
-            color: white;
-            padding: 15px 30px;
-            border-radius: 30px;
-            font-size: 16px;
-            pointer-events: none;
-            text-align: center;
-            backdrop-filter: blur(5px);
+            bottom: 20px;
+            width: 100%;
+            height: 150px;
+            z-index: 50;
+            pointer-events: none; /* 영역 전체는 통과, 버튼만 터치 가능 */
+            display: flex;
+            justify-content: space-between;
+            padding: 0 40px;
+            box-sizing: border-box;
         }
-        .key { display: inline-block; background: #fff; color: #333; padding: 2px 8px; border-radius: 5px; font-weight: bold; margin: 0 3px; box-shadow: 0 2px 0 #ccc; }
-        .highlight { color: #FFD700; font-weight: bold; }
+
+        /* 조이스틱 영역 */
+        #joystick-area {
+            width: 120px;
+            height: 120px;
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.4);
+            border-radius: 50%;
+            position: relative;
+            pointer-events: auto; /* 터치 활성화 */
+            backdrop-filter: blur(2px);
+        }
+        #joystick-knob {
+            width: 50px;
+            height: 50px;
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 50%;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            pointer-events: none;
+        }
+
+        /* 액션 버튼 */
+        #action-btn {
+            width: 100px;
+            height: 100px;
+            background: rgba(255, 69, 0, 0.6); /* 오렌지색 반투명 */
+            border: 4px solid rgba(255, 255, 255, 0.6);
+            border-radius: 50%;
+            pointer-events: auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 900;
+            font-size: 20px;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            transition: transform 0.1s, background 0.1s;
+        }
+        #action-btn:active {
+            transform: scale(0.95);
+            background: rgba(255, 69, 0, 0.8);
+        }
+
+        /* PC용 안내 (모바일에서는 숨김 가능) */
+        #pc-controls {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: rgba(255,255,255,0.7);
+            font-size: 12px;
+            pointer-events: none;
+        }
+
+        @media (max-width: 600px) {
+            #mobile-controls { padding: 0 20px; bottom: 30px; }
+            #main-msg { font-size: 40px; }
+            #pc-controls { display: none; }
+        }
     </style>
 </head>
 <body>
@@ -109,7 +179,7 @@
             <div id="score-p" class="score-num">0</div>
         </div>
         <div class="score-box ai">
-            <div class="score-label">Computer</div>
+            <div class="score-label">Com</div>
             <div id="score-a" class="score-num">0</div>
         </div>
     </div>
@@ -119,11 +189,16 @@
         <div id="sub-msg">Point to AI</div>
     </div>
 
-    <div id="serve-guide">CLICK TO TOSS!</div>
+    <div id="serve-guide">TAP BUTTON TO TOSS!</div>
 
-    <div id="controls">
-        <span class="key">W</span><span class="key">A</span><span class="key">S</span><span class="key">D</span> 이동 &nbsp;|&nbsp; 
-        <span class="key">Click</span> 서브(토스+샷) / 스매시
+    <div id="pc-controls">WASD: Move / Click: Swing</div>
+
+    <!-- 모바일 컨트롤러 -->
+    <div id="mobile-controls">
+        <div id="joystick-area">
+            <div id="joystick-knob"></div>
+        </div>
+        <div id="action-btn">HIT</div>
     </div>
 
     <script type="importmap">
@@ -143,28 +218,30 @@
         scene.fog = new THREE.Fog(0x87CEEB, 20, 100);
 
         const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.set(0, 18, 42); 
+        camera.position.set(0, 19, 43); // 모바일 시야 확보를 위해 약간 더 뒤로
         camera.lookAt(0, 0, -5);
 
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.shadowMap.enabled = true;
         renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        // 픽셀 비율 최적화 (모바일 성능)
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         document.body.appendChild(renderer.domElement);
 
         // --- 2. 조명 ---
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
         scene.add(ambientLight);
 
         const dirLight = new THREE.DirectionalLight(0xfffee0, 1.2);
         dirLight.position.set(-20, 50, 20);
         dirLight.castShadow = true;
-        dirLight.shadow.camera.left = -50;
-        dirLight.shadow.camera.right = 50;
-        dirLight.shadow.camera.top = 50;
-        dirLight.shadow.camera.bottom = -50;
         dirLight.shadow.mapSize.width = 2048;
         dirLight.shadow.mapSize.height = 2048;
+        dirLight.shadow.camera.left = -40;
+        dirLight.shadow.camera.right = 40;
+        dirLight.shadow.camera.top = 40;
+        dirLight.shadow.camera.bottom = -40;
         scene.add(dirLight);
 
         // --- 3. 경기장 ---
@@ -198,7 +275,7 @@
         createLine(COURT_W, lw, 0, -13);
         createLine(lw, 26, 0, 0);
 
-        // 관중석
+        // 관중석 (단순화 및 최적화)
         const spectators = [];
         function createStand(x, z, rotY) {
             const group = new THREE.Group();
@@ -209,9 +286,10 @@
             stand.castShadow = true;
             group.add(stand);
 
-            for(let i=0; i<40; i++) {
+            const headGeo = new THREE.BoxGeometry(0.8, 0.8, 0.8);
+            for(let i=0; i<30; i++) {
                 const c = new THREE.Color().setHSL(Math.random(), 0.8, 0.5);
-                const head = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.8, 0.8), new THREE.MeshLambertMaterial({color: c}));
+                const head = new THREE.Mesh(headGeo, new THREE.MeshLambertMaterial({color: c}));
                 const px = (Math.random()-0.5) * 45;
                 const pz = (Math.random()-0.5) * 8;
                 const py = 6.5 + Math.random() * 0.5;
@@ -223,9 +301,9 @@
             group.rotation.y = rotY;
             scene.add(group);
         }
-        createStand(0, -40, 0);
-        createStand(-32, 0, Math.PI/2);
-        createStand(32, 0, -Math.PI/2);
+        createStand(0, -42, 0);
+        createStand(-35, 0, Math.PI/2);
+        createStand(35, 0, -Math.PI/2);
 
         // 네트
         const netGroup = new THREE.Group();
@@ -238,7 +316,6 @@
         const p2 = new THREE.Mesh(poleGeo, poleMat); p2.position.set((COURT_W/2+1), 1.5, 0);
         netGroup.add(p1, p2);
         scene.add(netGroup);
-
 
         // --- 4. 캐릭터 ---
         function createCharacter(color, isPlayer) {
@@ -275,7 +352,7 @@
 
             armPivot.rotation.x = -0.5; 
 
-            return {mesh: group, arm: armPivot, head: head, isPlayer: isPlayer, action: 'idle', animTime: 0};
+            return {mesh: group, arm: armPivot, head: head, isPlayer: isPlayer, action: 'idle', animTime: 0, isSmashReady: false};
         }
 
         const player = createCharacter(0x1E90FF, true);
@@ -287,14 +364,19 @@
         ai.mesh.rotation.y = Math.PI;
         scene.add(ai.mesh);
 
-
         // --- 5. 공 & 이펙트 ---
         const ball = new THREE.Mesh(new THREE.SphereGeometry(0.35, 32, 32), new THREE.MeshPhongMaterial({color: 0xccff00, emissive: 0x112200}));
         ball.castShadow = true;
         scene.add(ball);
 
+        // 공 그림자 가이드 (모바일 거리감 보정용)
+        const ballShadowGuide = new THREE.Mesh(new THREE.CircleGeometry(0.35, 16), new THREE.MeshBasicMaterial({color: 0x000000, opacity: 0.3, transparent: true}));
+        ballShadowGuide.rotation.x = -Math.PI/2;
+        ballShadowGuide.position.y = 0.02;
+        scene.add(ballShadowGuide);
+
         const trailSpheres = [];
-        const MAX_TRAIL = 10;
+        const MAX_TRAIL = 12; // 트레일 길이 증가
         for(let i=0; i<MAX_TRAIL; i++) {
             const s = new THREE.Mesh(new THREE.SphereGeometry(0.3 - (i*0.02), 8, 8), 
                 new THREE.MeshBasicMaterial({color: 0xffaa00, transparent: true, opacity: 0.6 - (i*0.05)}));
@@ -323,7 +405,7 @@
         const particles = [];
         const particleGeo = new THREE.BoxGeometry(0.2, 0.2, 0.2);
         const particleMat = new THREE.MeshBasicMaterial({color: 0xffffff});
-        for(let i=0; i<20; i++) {
+        for(let i=0; i<25; i++) {
             const p = new THREE.Mesh(particleGeo, particleMat.clone());
             p.visible = false;
             scene.add(p);
@@ -341,51 +423,123 @@
             });
         }
 
-        // --- 6. 게임 로직 (서브 시스템 추가) ---
+        // --- 6. 입력 처리 (모바일 + PC 통합) ---
+        const inputState = { x: 0, z: 0, action: false };
+        const keys = { w:false, a:false, s:false, d:false };
+
+        // PC 키보드
+        window.addEventListener('keydown', e => { 
+            const k = e.key.toLowerCase();
+            if(keys.hasOwnProperty(k)) keys[k] = true; 
+        });
+        window.addEventListener('keyup', e => { 
+            const k = e.key.toLowerCase();
+            if(keys.hasOwnProperty(k)) keys[k] = false; 
+        });
+
+        // 모바일 조이스틱
+        const joystickArea = document.getElementById('joystick-area');
+        const joystickKnob = document.getElementById('joystick-knob');
+        let joystickActive = false;
+        let joyStartX = 0, joyStartY = 0;
+
+        joystickArea.addEventListener('touchstart', (e) => {
+            joystickActive = true;
+            const touch = e.touches[0];
+            const rect = joystickArea.getBoundingClientRect();
+            // 조이스틱 중심 기준
+            joyStartX = rect.left + rect.width / 2;
+            joyStartY = rect.top + rect.height / 2;
+            updateJoystick(touch.clientX, touch.clientY);
+        }, {passive: false});
+
+        joystickArea.addEventListener('touchmove', (e) => {
+            if(joystickActive) {
+                e.preventDefault(); // 스크롤 방지
+                updateJoystick(e.touches[0].clientX, e.touches[0].clientY);
+            }
+        }, {passive: false});
+
+        const endJoystick = () => {
+            joystickActive = false;
+            inputState.x = 0;
+            inputState.z = 0;
+            joystickKnob.style.transform = `translate(-50%, -50%)`;
+        };
+        joystickArea.addEventListener('touchend', endJoystick);
+        joystickArea.addEventListener('touchcancel', endJoystick);
+
+        function updateJoystick(clientX, clientY) {
+            const maxDist = 40; // 조이스틱 가동 범위
+            let dx = clientX - joyStartX;
+            let dy = clientY - joyStartY;
+            const dist = Math.sqrt(dx*dx + dy*dy);
+            
+            if(dist > maxDist) {
+                const ratio = maxDist / dist;
+                dx *= ratio;
+                dy *= ratio;
+            }
+
+            joystickKnob.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+            
+            // 입력값 정규화 (-1 ~ 1)
+            inputState.x = dx / maxDist;
+            inputState.z = dy / maxDist;
+        }
+
+        // 액션 버튼 & 마우스 클릭 통합
+        function handleActionStart() {
+            triggerAction();
+        }
+        function handleActionEnd() {
+            player.isSmashReady = false;
+        }
+
+        const actionBtn = document.getElementById('action-btn');
+        actionBtn.addEventListener('touchstart', (e) => { e.preventDefault(); handleActionStart(); }, {passive: false});
+        actionBtn.addEventListener('touchend', (e) => { e.preventDefault(); handleActionEnd(); });
+        
+        // PC 클릭
+        window.addEventListener('mousedown', handleActionStart);
+        window.addEventListener('mouseup', handleActionEnd);
+
+        // --- 7. 게임 로직 ---
         let ballVel = new THREE.Vector3();
         let scoreP = 0;
         let scoreA = 0;
-        
-        // 상태: 'serve_hold', 'serve_toss', 'playing', 'end'
         let gameState = 'serve_hold'; 
-        let currentServer = 'player'; // 현재 서브권을 가진 사람
+        let currentServer = 'player';
         let lastHitter = null;
         let isSuperShot = false;
 
         const serveGuide = document.getElementById('serve-guide');
-        const keys = {w:false, a:false, s:false, d:false};
-        
-        window.addEventListener('keydown', e => { if(keys.hasOwnProperty(e.key.toLowerCase())) keys[e.key.toLowerCase()] = true; });
-        window.addEventListener('keyup', e => { if(keys.hasOwnProperty(e.key.toLowerCase())) keys[e.key.toLowerCase()] = false; });
-        
-        // 마우스 클릭 이벤트 (서브 및 스매시)
-        window.addEventListener('mousedown', () => {
+
+        function triggerAction() {
             if (gameState === 'serve_hold' && currentServer === 'player') {
-                // 1. 토스
+                // 토스
                 gameState = 'serve_toss';
-                ballVel.set(0, 0.55, 0); // 위로 띄움
-                serveGuide.innerText = "CLICK TO SMASH!";
+                ballVel.set(0, 0.55, 0);
+                serveGuide.innerText = "TAP TO SMASH!";
                 serveGuide.style.color = "#FF4444";
             } else if (gameState === 'serve_toss' && currentServer === 'player') {
-                // 2. 서브 샷 (스매시)
-                if (ball.position.y > 1.5) { // 너무 낮으면 못 침
+                // 서브 스매시 (QOL: 높이 판정 완화)
+                if (ball.position.y > 0.8) { 
                     swingRacket(player);
                     gameState = 'playing';
-                    ballVel.set(0, 0.15, -0.9); // 강력한 서브
+                    ballVel.set(0, 0.15, -0.85); // 속도 약간 조절
                     isSuperShot = true;
                     lastHitter = 'player';
                     serveGuide.style.display = 'none';
                     spawnParticles(ball.position, 0xFFA500);
                 }
             } else {
-                // 게임 중 스매시 트리거
+                // 게임 중 스윙
                 player.isSmashReady = true;
+                // 공이 가까우면 즉시 스윙 시도 (반응성 향상)
+                checkPlayerHit(true);
             }
-        });
-        
-        window.addEventListener('mouseup', () => {
-            player.isSmashReady = false;
-        });
+        }
 
         function showMessage(main, sub, color='#fff') {
             const m = document.getElementById('main-msg');
@@ -400,12 +554,10 @@
             }, 1500);
         }
 
-        // 서브 리셋 함수 (진 사람에게 서브권)
         function resetServe(loser) {
             gameState = 'serve_hold';
             currentServer = loser;
             
-            // [수정됨] 캐릭터 상태 리셋 (얌전하게 복귀)
             player.action = 'idle';
             ai.action = 'idle';
             player.mesh.position.y = 0;
@@ -416,18 +568,14 @@
             clearTrail();
             isSuperShot = false;
             ballVel.set(0,0,0);
-            
-            // 공 위치 초기화 (손에 잡기)
             updateBallHoldPos();
 
-            // UI 안내
             if (currentServer === 'player') {
-                serveGuide.innerText = "CLICK TO TOSS!";
+                serveGuide.innerText = "TAP BUTTON TO TOSS!";
                 serveGuide.style.color = "#FFD700";
                 serveGuide.style.display = 'block';
             } else {
                 serveGuide.style.display = 'none';
-                // AI 자동 서브 스케줄
                 setTimeout(aiToss, 1000);
             }
         }
@@ -442,42 +590,120 @@
             }
         }
 
-        // AI 자동 서브 로직
         function aiToss() {
             if (gameState !== 'serve_hold' || currentServer !== 'ai') return;
             gameState = 'serve_toss';
-            ballVel.set(0, 0.55, 0); // AI 토스
-            setTimeout(aiServeHit, 600); // 0.6초 후 타격
+            ballVel.set(0, 0.55, 0);
+            setTimeout(aiServeHit, 600);
         }
 
         function aiServeHit() {
             if (gameState !== 'serve_toss') return;
             swingRacket(ai);
             gameState = 'playing';
-            // AI 서브 방향 (약간 랜덤)
             const aimX = (Math.random() - 0.5) * 0.3;
-            ballVel.set(aimX, 0.15, 0.7); // 플레이어 쪽으로
+            ballVel.set(aimX, 0.15, 0.65);
             lastHitter = 'ai';
         }
 
-        // 초기 시작 (플레이어 서브)
         resetServe('player'); 
 
-        // --- 7. 메인 루프 ---
+        // 플레이어 타격 판정 로직 분리 (QOL 개선)
+        function checkPlayerHit(forcedSwing = false) {
+            if (gameState !== 'playing') return;
+            
+            // 공이 플레이어 방향(z > 0)으로 오고 있거나 넘어오기 직전
+            if (ballVel.z > 0) { 
+                
+                let success = false;
+
+                // [수정] 균형 잡힌 판정 (Balanced Hit)
+                // 무조건 히트 대신, 거리를 체크하되 반경을 넉넉하게 설정 (6.5)
+                // 기존(3.0 ~ 4.5)보다는 넓고, 무한대보다는 좁게
+                const dist = ball.position.distanceTo(player.mesh.position);
+                
+                // 공이 플레이어 앞쪽이나 살짝 뒤에 있을 때도 허용
+                // Z축 거리 차이 (깊이)가 너무 멀면 안됨 (예: 공이 네트에 있는데 베이스라인에서 휘두르는 경우 방지)
+                const zDist = Math.abs(ball.position.z - player.mesh.position.z);
+
+                if (forcedSwing) {
+                    // 버튼 눌렀을 때: 반경 6.5 이내면 성공 + 깊이 차이 8.0 이내
+                    if (dist < 6.5 && zDist < 8.0) {
+                        success = true;
+                    }
+                } else {
+                    // 일반 접촉 (몸에 닿음): 반경 4.5
+                    if (dist < 4.5) success = true;
+                }
+
+                if (success) {
+                    swingRacket(player);
+                    
+                    // 공 반사 처리
+                    ballVel.z *= -1; 
+                    // 속도 보정 (너무 느려지지 않게)
+                    if (Math.abs(ballVel.z) < 0.6) ballVel.z = -0.7;
+
+                    // 스매시/강타 여부
+                    if(forcedSwing || player.isSmashReady) {
+                        ballVel.y = 0.2; // 낮고 빠르게
+                        ballVel.z = -0.95; 
+                        isSuperShot = true;
+                        spawnParticles(ball.position, 0xFFA500);
+                    } else {
+                        ballVel.y = 0.45; 
+                        isSuperShot = false;
+                    }
+
+                    // [Magic Hit 방향 보정]
+                    // 멀리서 쳐도 공이 코트 안으로 들어가도록 보정
+                    let aimX = 0;
+                    const distToBall = ball.position.distanceTo(player.mesh.position);
+                    
+                    if (distToBall > 5.0) {
+                        // 원격 타격 시: 조이스틱 방향 + 중앙 지향
+                        aimX = (inputState.x * 0.3) + ((Math.random()-0.5) * 0.2); 
+                        // 너무 측면이면 중앙으로 휨
+                        if (ball.position.x > 10) aimX -= 0.15;
+                        if (ball.position.x < -10) aimX += 0.15;
+                    } else {
+                        // 근접 타격 시: 물리적 위치 반영
+                        aimX = (ball.position.x - player.mesh.position.x) * 0.3;
+                        if (inputState.x !== 0) aimX += inputState.x * 0.2;
+                    }
+
+                    ballVel.x = aimX;
+                    
+                    lastHitter = 'player';
+                    player.isSmashReady = false; 
+                }
+            }
+        }
+
+        // --- 8. 메인 루프 ---
         function animate() {
             requestAnimationFrame(animate);
 
-            // 1. 플레이어 이동
-            const speed = 0.35;
-            if(keys.a) player.mesh.position.x -= speed;
-            if(keys.d) player.mesh.position.x += speed;
-            if(keys.w) player.mesh.position.z -= speed;
-            if(keys.s) player.mesh.position.z += speed;
+            // 1. 플레이어 이동 (키보드 + 조이스틱 혼합)
+            let moveX = 0;
+            let moveZ = 0;
+            const speed = 0.4;
+
+            if(keys.a) moveX -= 1;
+            if(keys.d) moveX += 1;
+            if(keys.w) moveZ -= 1;
+            if(keys.s) moveZ += 1;
+
+            // 조이스틱 입력 합산
+            moveX += inputState.x;
+            moveZ += inputState.z;
+
+            player.mesh.position.x += moveX * speed;
+            player.mesh.position.z += moveZ * speed;
             
             player.mesh.position.x = THREE.MathUtils.clamp(player.mesh.position.x, -16, 16);
             player.mesh.position.z = THREE.MathUtils.clamp(player.mesh.position.z, 0, 35);
 
-            // 서브 대기 중일 때 공이 플레이어 따라다님
             updateBallHoldPos();
 
             // 2. AI 이동
@@ -485,127 +711,112 @@
                 let targetX = ai.mesh.position.x;
                 let targetZ = -22;
 
-                if (gameState === 'playing' && ballVel.z < 0) { // 공이 AI 쪽으로 올 때
+                if (gameState === 'playing' && ballVel.z < 0) { 
                     targetX = ball.position.x;
                     if(ballVel.y < 0 && ball.position.z > -10) targetZ = -10;
                     else targetZ = -22; 
                 } else if (gameState === 'serve_toss' && currentServer === 'ai') {
-                    // AI 서브 토스 중 제자리
+                    // 제자리
                 } else {
-                    targetX = 0; // 중앙 복귀
+                    targetX = 0; 
                 }
-                ai.mesh.position.x += (targetX - ai.mesh.position.x) * 0.12; 
-                ai.mesh.position.z += (targetZ - ai.mesh.position.z) * 0.12;
+                ai.mesh.position.x += (targetX - ai.mesh.position.x) * 0.10; 
+                ai.mesh.position.z += (targetZ - ai.mesh.position.z) * 0.10;
             }
 
             // 3. 공 물리
             if(gameState === 'playing' || gameState === 'serve_toss') {
                 ball.position.add(ballVel);
-                ballVel.y -= 0.012; // 중력
+                ballVel.y -= 0.012; 
                 
+                // 그림자 가이드 업데이트
+                ballShadowGuide.position.x = ball.position.x;
+                ballShadowGuide.position.z = ball.position.z;
+                // 공 높이에 따라 그림자 크기/투명도 조절
+                const shadowScale = 1 - Math.min(ball.position.y / 10, 0.5);
+                ballShadowGuide.scale.setScalar(shadowScale);
+                ballShadowGuide.material.opacity = 0.3 * shadowScale;
+
                 if (gameState === 'playing') {
                     ballVel.x *= 0.995;
                     ballVel.z *= 0.995;
                     updateTrail(isSuperShot);
                 }
 
-                // 바닥 충돌
                 if(ball.position.y <= 0.35) {
                     ball.position.y = 0.35;
                     
                     if (gameState === 'serve_toss') {
-                        // 서브 토스했는데 안 치고 땅에 떨어짐 -> 서브 실패(폴트) -> 상대 점수
-                        // 편의상 다시 서브 기회 줌 (리셋)
                         gameState = 'serve_hold';
                         ballVel.set(0,0,0);
                         if(currentServer === 'player') {
                             serveGuide.innerText = "Try Again!";
-                            setTimeout(() => { serveGuide.innerText = "CLICK TO TOSS!"; }, 1000);
+                            setTimeout(() => { serveGuide.innerText = "TAP TO TOSS!"; }, 1000);
                         } else {
-                            resetServe('ai'); // AI 실수 재시도
+                            resetServe('ai');
                         }
                     } else {
-                        // Playing 상태
                         spawnParticles(ball.position, 0xcccccc);
                         
-                        // 라인 판정
                         const inX = Math.abs(ball.position.x) <= COURT_W/2 + 0.5;
                         const inZ = Math.abs(ball.position.z) <= COURT_H/2 + 0.5;
                         
                         if(!inX || !inZ) { // OUT
                             handleScore(lastHitter === 'player' ? 'ai' : 'player', "OUT!");
-                        } else { // IN
-                            ballVel.y *= -0.85; 
+                        } else { // IN (바운드)
+                            ballVel.y *= -0.8; 
                             isSuperShot = false;
                         }
                     }
                 }
 
-                // 네트 충돌
                 if(Math.abs(ball.position.z) < 1 && ball.position.y < 2.2) {
                     ballVel.z *= -0.5;
                     ballVel.x *= 0.5;
                     isSuperShot = false;
                 }
+            } else {
+                ballShadowGuide.position.set(0, -100, 0); // 숨김
             }
 
-            // 4. 타격 판정 (게임 중)
+            // 4. 타격 판정 (루프 내에서 체크 - AI만)
             if (gameState === 'playing') {
-                const hitDist = 3.0;
-                // Player Hit
-                if(ballVel.z > 0 && ball.position.z > 0) {
-                    if(ball.position.distanceTo(player.mesh.position) < hitDist) {
-                        swingRacket(player);
-                        ballVel.z *= -1;
-                        
-                        if(player.isSmashReady) {
-                            ballVel.z = -0.9; ballVel.y = 0.15; isSuperShot = true;
-                            spawnParticles(ball.position, 0xFFA500);
-                        } else {
-                            ballVel.z = -0.6; ballVel.y = 0.45; isSuperShot = false;
-                        }
-                        ballVel.x = (ball.position.x - player.mesh.position.x) * 0.3;
-                        lastHitter = 'player';
-                    }
-                }
-                // AI Hit
+                // Player Hit Check -> 버튼 클릭 시 checkPlayerHit() 실행됨
+                
+                // AI Hit Check
+                const hitDist = 4.0; 
                 if(ballVel.z < 0 && ball.position.z < 0) {
                     if(ball.position.distanceTo(ai.mesh.position) < hitDist) {
                         swingRacket(ai);
                         ballVel.z *= -1;
-                        if(Math.random() > 0.7) { ballVel.z = 0.85; ballVel.y = 0.2; isSuperShot = true; }
+                        if(Math.random() > 0.6) { ballVel.z = 0.8; ballVel.y = 0.2; isSuperShot = true; }
                         else { ballVel.z = 0.6; ballVel.y = 0.45; isSuperShot = false; }
                         ballVel.x = (ball.position.x - ai.mesh.position.x) * 0.3;
                         lastHitter = 'ai';
                     }
                 }
 
-                // 5. 골 판정
-                if(ball.position.z > 35) handleScore('ai', "GOAL!"); // AI 득점
-                else if(ball.position.z < -35) handleScore('player', "NICE SHOT!"); // Player 득점
+                if(ball.position.z > 35) handleScore('ai', "GOAL!"); 
+                else if(ball.position.z < -35) handleScore('player', "NICE SHOT!");
             }
 
             updateCharacter(player);
             updateCharacter(ai);
             updateParticles();
-            updateSpectators();
             renderer.render(scene, camera);
         }
 
-        // 점수 처리 및 패자 서브 설정
         function handleScore(winner, msg) {
             gameState = 'end';
             if (winner === 'ai') {
                 scoreA++; document.getElementById('score-a').innerText = scoreA;
-                showMessage(msg, "AI Scores", "#FF4444");
+                showMessage(msg, "AI Point", "#FF4444");
                 ai.action = 'happy'; player.action = 'sad';
-                // 플레이어가 졌으므로 플레이어 서브
                 setTimeout(() => resetServe('player'), 2000);
             } else {
                 scoreP++; document.getElementById('score-p').innerText = scoreP;
-                showMessage(msg, "Player Scores", "#4444FF");
+                showMessage(msg, "Player Point", "#4444FF");
                 ai.action = 'sad'; player.action = 'happy';
-                // AI가 졌으므로 AI 서브
                 setTimeout(() => resetServe('ai'), 2000);
             }
         }
@@ -613,8 +824,13 @@
         function swingRacket(char) {
             let f = 0;
             const anim = () => {
-                if(f < 8) { char.arm.rotation.x -= 0.4; f++; requestAnimationFrame(anim); }
-                else char.arm.rotation.x = -0.5;
+                if(f < 6) { // 스윙 속도 향상
+                    char.arm.rotation.x -= 0.5; 
+                    f++; 
+                    requestAnimationFrame(anim); 
+                } else {
+                    char.arm.rotation.x = -0.5;
+                }
             }
             anim();
         }
@@ -627,9 +843,17 @@
             } else if(c.action === 'sad') {
                 c.mesh.rotation.x = 0.5;
             } else {
-                // 서브가 아니고 게임중이거나 대기일때만 y축 0
                 if (gameState !== 'serve_hold') c.mesh.position.y = 0; 
                 c.mesh.rotation.x = 0; c.arm.rotation.z = 0;
+                
+                // 이동 시 몸 기울기 효과
+                if(c.isPlayer && (inputState.x !== 0 || keys.a || keys.d)) {
+                   c.mesh.rotation.z = -(inputState.x || (keys.a?-1:1)) * 0.1;
+                   c.mesh.rotation.y = -(inputState.x || (keys.a?-1:1)) * 0.2;
+                } else {
+                   c.mesh.rotation.z = 0;
+                   if(c.isPlayer) c.mesh.rotation.y = 0;
+                }
             }
         }
 
@@ -641,13 +865,6 @@
                     p.mesh.scale.setScalar(p.life);
                     p.mesh.visible = true;
                 } else p.mesh.visible = false;
-            });
-        }
-
-        function updateSpectators() {
-            const time = Date.now() * 0.005;
-            spectators.forEach(s => {
-                s.mesh.position.y = s.baseY + Math.abs(Math.sin(time * s.speed + s.offset)) * 0.5;
             });
         }
 
